@@ -3,24 +3,33 @@
 #include <atomic>
 
 
+
 template <typename T, typename N>
 class SPMCQueue{
 private:
-    std::vector<T> buffer_;
+
+    template <typename T>
+    struct Slot{
+        std::atomic<int64_t> seq_;
+        T data_;
+    }
+
+    std::vector<Slot<T>> buffer_;
     int64_t capacity_;
     int64_t size_;
-    std::atomic<int64_t> tail_;
+    int64_t tail_;
     std::atomic<int64_t> head_;
-    
 
 public:
+
 
     SPMCQueue(T type, N size){
         buffer_.resize(size);
         capacity_ = size;
         size_ = 0;
         tail_ = 0;
-        head_ = 0;
+        head_.store(0);
+        // not correct need to store i into each seq in buffer
     }
 
     // can try getting this working
@@ -31,13 +40,19 @@ public:
     // didnt write a move constructor or assign
 
     bool push(const T& value){
-        auto currTail = tail_.load(std::memory_order_relaxed);
-        if (currTail - head_.load(std::memory_order_acquire) == capacity_)
-            return false;
-        
-        buffer_[currTail % capacity_] = value;
-        tail_.store(currTail + 1, std::memory_order_release);
+        auto currTail = tail_;
+        Slot& slot = buffer_[tail_ % capacity_];
 
+        const std::size_t seqNum = slot.seq_.load(std::memory_order_acquire);
+
+        if (currTail != seqNum){
+            return false;
+        }
+        
+        buffer_[currTail % capacity_].data_ = value; // might throw but not a problem, no state has changed
+        slot.seq_.store(tail_ + 1, std::memory_order_release);
+        
+        tail_++;
         return true;
     }
 
@@ -45,17 +60,26 @@ public:
         while (true){
             auto currHead = head_.load(std::memory_order_relaxed);
 
-            if (currHead == tail_.load(std::memory_order_acquire)){
+            auto& slot = buffer_[currHead % capacity_];
+            auto seqNum = slot.seq_.load(std::memory_order_acquire);
+
+            
+            if (seqNum < currHead + 1){
                 return std::nullopt;
             }
-
-            T value_ = buffer_[currHead % capacity_];
-
+            
             if (head_.compare_exchange_weak(
-                currHead, currHead + 1, 
-                std::memory_order_release, std::memory_order_relaxed)){
+                currHead, 
+                currHead + 1, 
+                std::memory_order_relaxed, 
+                std::memory_order_relaxed)){
+                    T value_ = buffer_[currHead % capacity_].data_; // problem if this throws
+
+                    slot.seq_.store(currHead + capacity_, std::memory_order_release);
+
                     return value_;
                 }
+
         }
     }
 
