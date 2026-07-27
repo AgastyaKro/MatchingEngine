@@ -3,18 +3,16 @@
 #include <atomic>
 
 
-
-template <typename T, typename N>
+using namespace std;
+template <typename T, std::int64_t N>
 class SPMCQueue{
 private:
-
-    template <typename T>
     struct Slot{
         std::atomic<int64_t> seq_;
         T data_;
     }
 
-    std::vector<Slot<T>> buffer_;
+    std::array<Slot, N> buffer_;
     int64_t capacity_;
     int64_t size_;
     int64_t tail_;
@@ -22,14 +20,15 @@ private:
 
 public:
 
-
-    SPMCQueue(T type, N size){
-        buffer_.resize(size);
-        capacity_ = size;
-        size_ = 0;
-        tail_ = 0;
-        head_.store(0);
-        // not correct need to store i into each seq in buffer
+    SPMCQueue() : 
+        capacity_{N}
+        size_{0},
+        tail_{0}
+        head_{0}
+    {   
+        for (int i = 0; i < N; i++){
+            buffer_[i].seq_.store({i, std::memory_order_relaxed});
+        }
     }
 
     // can try getting this working
