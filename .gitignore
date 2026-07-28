@@ -1,0 +1,17 @@
+# Compiled binary
+queue_tests
+
+# Build artifacts
+*.o
+*.out
+*.exe
+
+# perf output
+perf.data
+perf.data.old
+
+# macOS junk
+.DS_Store
+
+# Editor/IDE
+.vscode/

@@ -1,18 +1,24 @@
 #include "boost_queue_adapter.hpp"
-#include "spmc_queue_lf.hpp"
-#include "queue_test_suite.hpp"
 #include "queue_benchmark.hpp"
+#include "queue_test_suite.hpp"
+#include "spmc_queue_lf.hpp"
+
+#include <cstdint>
+#include <exception>
+#include <iostream>
+#include <string>
+#include <string_view>
 
 namespace {
     constexpr std::int64_t kTestCapacity = 1024;
-    constexpr std::int64_t kBenchCapacity = 65'536;
+    constexpr std::int64_t kBenchCapacity = 32'768;
 
     template <typename T>
     struct QueueTraits{
         using SPMCTest = SPMCQueue<T, kTestCapacity>;
-        using BoostTest = BoostQueueCapacity<T, kTestCapacity>;
+        using BoostTest = BoostAdapterQueue<T, kTestCapacity>;
         using SPMCBench = SPMCQueue<T, kBenchCapacity>;
-        using BoostBench = BoostQueueCapacity<T, kBenchCapacity>;
+        using BoostBench = BoostAdapterQueue<T, kBenchCapacity>;
     };
 
     template <typename T>
@@ -23,7 +29,7 @@ namespace {
         queue_tests::runCorrectnessTests<typename Q::SPMCTest, kTestCapacity>();
         std::cerr << "SPMCQueue passed \n";
         std::cerr << "Boost... \n";
-        queue_tests::runCorrectnessTests<typename Q::BoostTests, kTestCapacity>();
+        queue_tests::runCorrectnessTests<typename Q::BoostTest, kTestCapacity>();
         std::cerr << "BoostQueue passed \n";
     }
 
@@ -31,14 +37,14 @@ namespace {
     void benchFor(std::string_view typeName, std::string_view which, std::int64_t consumers, std::int64_t items){
         using Q = QueueTraits<T>;
 
-        std::cerr << "== benchmark[" typeName << "] (consumers=" << consumers << " items=" << items << ") ==\n";
+        std::cerr << "== benchmark[" << typeName << "] (consumers=" << consumers << " items=" << items << ") ==\n";
 
         if (which.empty() || which == "spmc"){
-            std::cout << "SPMCQueue [" << typename << "]:\n";
+            std::cout << "SPMCQueue [" << typeName << "]:\n";
             queue_bench::runThroughput<typename Q::SPMCBench>(consumers, items);
         }
         if (which.empty() || which == "boost"){
-            std::cout << "BoostQueue [" << typename << "]:\n";
+            std::cout << "BoostQueue [" << typeName << "]:\n";
             queue_bench::runThroughput<typename Q::BoostBench>(consumers, items);
         }
     }

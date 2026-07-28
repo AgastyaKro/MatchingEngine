@@ -2,15 +2,13 @@
 
 #include <boost/lockfree/queue.hpp>
 
-using namespace std;
 
-template <typename T, int64_t N>
+template <typename T, std::int64_t N>
 class BoostAdapterQueue{
 
 private:
     boost::lockfree::queue<T, 
     boost::lockfree::capacity<N>> queue_;
-
 
 public:
 
@@ -18,7 +16,7 @@ public:
         return queue_.push(value);
     }
 
-    optional<T> pop(){
+    std::optional<T> pop(){
         T value;
 
         if (!queue_.pop(value))
