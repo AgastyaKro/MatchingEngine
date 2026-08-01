@@ -16,7 +16,7 @@ private:
     int64_t capacity_;
     int64_t size_;
     int64_t tail_;
-    std::atomic<int64_t> head_;
+    alignas(64) std::atomic<int64_t> head_;
 
 public:
 
@@ -77,6 +77,9 @@ public:
 
                     return value_;
                 }
+            else {
+                __builtin_ia32_pause();
+            }
 
         }
     }
