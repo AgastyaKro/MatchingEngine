@@ -60,7 +60,7 @@ public:
         while (true){
             auto currHead = head_.load(std::memory_order_relaxed);
 
-            auto& slot = buffer_[currHead & (N - 1)];
+            auto& slot = buffer_[currHead % capacity_];
             auto seqNum = slot.seq_.load(std::memory_order_acquire);
 
             if (seqNum < currHead + 1){
@@ -72,7 +72,7 @@ public:
                 currHead + 1, 
                 std::memory_order_relaxed, 
                 std::memory_order_relaxed)){
-                    T value_ = buffer_[currHead & (N - 1)].data_; // problem if this throws
+                    T value_ = buffer_[currHead % capacity_].data_; // problem if this throws
 
                     slot.seq_.store(currHead + capacity_, std::memory_order_release);
 
