@@ -13,9 +13,10 @@ private:
     };
 
     std::array<Slot, N> buffer_;
-    int64_t capacity_;
-    int64_t size_;
-    int64_t tail_;
+    alignas(64) int64_t capacity_;
+    alignas(64) int64_t size_;
+    alignas(64) int64_t tail_;
+ 
     alignas(64) std::atomic<int64_t> head_;
 
 public:
