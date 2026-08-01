@@ -56,6 +56,7 @@ public:
     }
 
     std::optional<T> pop(){
+        int fail_count = 0;
         while (true){
             auto currHead = head_.load(std::memory_order_relaxed);
 
@@ -78,7 +79,19 @@ public:
                     return value_;
                 }
             else {
-                __builtin_ia32_pause();
+                fail_count++;
+                if (fail_count < 4){
+                    __builtin_ia32_pause();
+                }
+                else if(fail_count < 16){
+                    for (int i = 0; i < (fail_count * 2); i++){
+                        __builtin_ia32_pause();
+                    }
+                }
+                else {
+                    std::this_thread::yield();
+                    fail_count = 0;
+                }
             }
 
         }
