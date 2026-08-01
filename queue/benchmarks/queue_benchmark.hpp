@@ -13,7 +13,7 @@ void runThroughput(std::int64_t consumerCount, std::int64_t itemsCount) {
     Queue q;
     std::atomic<std::int64_t> consumed{0};
     std::vector<std::uint64_t> checksums(
-        static_cast<std::size_t>(consumerCount), 0);
+    static_cast<std::size_t>(consumerCount), 0);
     std::vector<std::thread> consumers;
 
     for (std::int64_t i = 0; i < consumerCount; ++i) {
