@@ -75,7 +75,7 @@ void runThroughput(std::int64_t consumerCount, std::int64_t itemsCount) {
         std::cout << "  (no latency samples)\n";
         return;
     }
-    
+
     std::sort(all.begin(), all.end());
 
     auto pct = [&](double p){
@@ -87,6 +87,7 @@ void runThroughput(std::int64_t consumerCount, std::int64_t itemsCount) {
               << " secs=" << secs << '\n'
               << " items/sec=" << (static_cast<double>(itemsCount) / secs) << '\n'
               << " checksum=" << checksum << '\n'
+              << " latency (TSC cycles): "
               << " p99=" << pct(0.99) << '\n'
               << " p99.9=" << pct(0.999) << '\n'
               << " max=" << all.back() << '\n';
