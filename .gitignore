@@ -1,5 +1,7 @@
 # Compiled binary
 queue_tests
+queue_tests_tsan
+micro_bench
 
 # Build artifacts
 *.o
@@ -9,6 +11,18 @@ queue_tests
 # perf output
 perf.data
 perf.data.old
+*.data
+*.svg
+*.perf
+index.html
+
+# stray/accidental files from mistyped commands
+s
+udo perf report
+trace_cache.gdb
+
+# vendored library source (installed to system instead)
+HdrHistogram_c/
 
 # macOS junk
 .DS_Store

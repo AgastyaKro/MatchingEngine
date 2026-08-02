@@ -8,6 +8,7 @@
 #include <x86intrin.h>   
 #include <immintrin.h>   
 #include <algorithm>
+#include <hdr/hdr_histogram.h>
 
 namespace queue_bench {
 
@@ -18,27 +19,24 @@ void runThroughput(std::int64_t consumerCount, std::int64_t itemsCount) {
     std::vector<std::uint64_t> checksums(
     static_cast<std::size_t>(consumerCount), 0);
     std::vector<std::thread> consumers;
-    std::vector<std::vector<uint64_t>> per_thread_latencies(consumerCount);
 
-    for (auto& v : per_thread_latencies){
-        v.reserve(itemsCount);
+    std::vector<hdr_histogram*> hists(consumerCount, nullptr);
+
+    
+    for (auto& hist : hists){
+        hdr_init(1, 10'000'000, 3, &hist);
     }
 
     for (std::int64_t i = 0; i < consumerCount; ++i) {
         consumers.emplace_back([&, i]() {
             std::uint64_t local = 0;
+            hdr_histogram* h = hists[i];
             while (consumed.load(std::memory_order_relaxed) < itemsCount) {
-                unsigned int start_aux;
-                unsigned int end_aux;
-
-                uint64_t start =  __rdtscp(&start_aux);
-                _mm_lfence();
+                uint64_t start =  __rdtsc();
                 auto v = q.pop();
-                
-                uint64_t end = __rdtscp(&end_aux);
-                _mm_lfence();
+                uint64_t dt = __rdtsc() - start;
                 if (v) {
-                    per_thread_latencies[i].push_back(end-start);
+                    hdr_record_value(h, dt);
                     local += *v;
                     consumed.fetch_add(1, std::memory_order_relaxed);
                 }
@@ -61,36 +59,28 @@ void runThroughput(std::int64_t consumerCount, std::int64_t itemsCount) {
 
     const double secs = std::chrono::duration<double>(end - start).count();
 
- 
-    
-    std::vector<uint64_t> all;
-    all.reserve(itemsCount);
-    
 
-    for (auto& group : per_thread_latencies){
-        all.insert(all.end(), group.begin(), group.end());
+    hdr_histogram* merged = nullptr;
+    hdr_init(1, 10'000'000, 3, &merged);
+
+    for (auto h : hists){
+        hdr_add(merged, h);
     }
 
-    if (all.empty()) {
-        std::cout << "  (no latency samples)\n";
-        return;
-    }
-
-    std::sort(all.begin(), all.end());
-
-    auto pct = [&](double p){
-        return all[static_cast<int64_t>(all.size() * p)];
-    };
-
-    std::cout << "  consumers=" << consumerCount << '\n'
+    std::cout << " consumers=" << consumerCount << '\n'
               << " items=" << itemsCount << '\n'
               << " secs=" << secs << '\n'
               << " items/sec=" << (static_cast<double>(itemsCount) / secs) << '\n'
               << " checksum=" << checksum << '\n'
               << " latency (TSC cycles): "
-              << " p99=" << pct(0.99) << '\n'
-              << " p99.9=" << pct(0.999) << '\n'
-              << " max=" << all.back() << '\n';
+              << " p99=" << hdr_value_at_percentile(merged,50.0) << '\n'
+              << " p99.9=" << hdr_value_at_percentile(merged,99.0) << '\n'
+              << " max=" << hdr_max(merged) << '\n';
+    
+    for (auto h : hists){
+        hdr_close(h);
+    }
+    hdr_close(merged);
 }
 
 } // namespace queue_bench
