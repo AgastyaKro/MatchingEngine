@@ -1,12 +1,15 @@
 # Compiled binary
 queue_tests
 queue_tests_tsan
+queue_tests_o1
 micro_bench
+mb
 
 # Build artifacts
 *.o
 *.out
 *.exe
+*.s
 
 # perf output
 perf.data
@@ -15,6 +18,18 @@ perf.data.old
 *.svg
 *.perf
 index.html
+
+# perf/profiling text dumps
+raw_dump.txt
+script.txt
+types.txt
+members.txt
+cache.txt
+cl.txt
+ibs-decoded.txt
+
+# kernel clone (perf-from-source build, not part of this project)
+linux/
 
 # stray/accidental files from mistyped commands
 s

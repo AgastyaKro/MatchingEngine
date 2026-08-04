@@ -32,11 +32,11 @@ void runThroughput(std::int64_t consumerCount, std::int64_t itemsCount) {
             std::uint64_t local = 0;
             hdr_histogram* h = hists[i];
             while (consumed.load(std::memory_order_relaxed) < itemsCount) {
-                uint64_t start =  __rdtsc();
+                // uint64_t start =  __rdtsc();
                 auto v = q.pop();
-                uint64_t dt = __rdtsc() - start;
+                // uint64_t dt = __rdtsc() - start;
                 if (v) {
-                    hdr_record_value(h, dt);
+                    // hdr_record_value(h, dt);
                     local += *v;
                     consumed.fetch_add(1, std::memory_order_relaxed);
                 }
