@@ -2,6 +2,7 @@
 #include "queue_benchmark.hpp"
 #include "queue_test_suite.hpp"
 #include "spmc_queue_lf.hpp"
+#include "sharding_queue_lf.hpp"
 
 #include <cstdint>
 #include <exception>
@@ -37,6 +38,9 @@ namespace {
     void benchFor(std::string_view typeName, std::string_view which, std::int64_t consumers, std::int64_t items){
         using Q = QueueTraits<T>;
 
+        constexpr std::uint64_t kShard2Size = kBenchCapacity / 2;
+        constexpr std::uint64_t kShard4Size = kBenchCapacity / 4;
+
         std::cerr << "== benchmark[" << typeName << "] (consumers=" << consumers << " items=" << items << ") ==\n";
 
         if (which.empty() || which == "spmc"){
@@ -47,13 +51,24 @@ namespace {
             std::cout << "BoostQueue [" << typeName << "]:\n";
             queue_bench::runThroughput<typename Q::BoostBench>(consumers, items);
         }
+
+        if (which.empty() || which == "shard2"){
+            std::cout << "ShardingQueue <2," << kShard2Size << "> [" << typeName << "]: \n";
+            queue_bench::runThroughputSharded<ShardingQueue<T, 2, kShard2Size>>(2, items);
+        }
+
+        if (which.empty() || which == "shard4"){
+            std::cout << "ShardingQueue <4," << kShard2Size << "> [" << typeName << "]: \n";
+            queue_bench::runThroughputSharded<ShardingQueue<T, 4, kShard2Size>>(4, items);
+        }
+
     }
 
     void printUsage(){
         std::cerr 
         << "Usage:\n"
         << " ./queue_tests correctness\n"
-        << " ./queue_tests bench [spmc|boost] [consumers] [items]\n";
+        << " ./queue_tests bench [spmc|boost|shard2|shard4] [consumers] [items]\n";
     }
 
 
@@ -89,7 +104,7 @@ int main(int argc, char** argv){
             std::string_view which;
             if (argc >= 3){
                 which = argv[2];
-                if (which != "spmc" && which != "boost"){
+                if (which != "spmc" && which != "boost" && which != "shard2" && which != "shard4"){
                     std::cerr << "unknown queue" << "\n";
                     printUsage();
                     return 1;
@@ -108,7 +123,6 @@ int main(int argc, char** argv){
             benchFor<std::uint64_t>("u64", which, consumers, items);
             return 0;
         }
-
         std::cerr << "unknown mode: " << mode << "\n";
         printUsage();
         return 1;
